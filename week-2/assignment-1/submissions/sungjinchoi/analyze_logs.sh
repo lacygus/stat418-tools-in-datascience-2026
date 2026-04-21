@@ -65,13 +65,15 @@ for LOGFILE in "$@"; do
       errors404++
       error_hour[hour]++
       error_host[host]++
+    } else {
+      host_hits[host]++
+      url_hits[url]++
     }
 
-    host_hits[host]++
-    url_hits[url]++
-
-    total_bytes += bytes
-    if (bytes > max_bytes) max_bytes = bytes
+    if (bytes ~ /^[0-9]+$/) {
+      total_bytes += bytes+0
+      if (bytes+0 > max_bytes) max_bytes = bytes+0
+    }
   }
   END {
     print "FILE=" filename
@@ -163,6 +165,22 @@ for LOGFILE in "$@"; do
     for (h in error_hour) print h, error_hour[h] | "sort"
     close("sort")
   }' "$LOGFILE" > "$OUTFILE"
+
+  echo "===OUTAGE_GAPS===" >> "$OUTFILE"
+  awk '/^===REQUESTS_BY_DAY===/{f=1;next} /^===/{f=0} f&&NF{print $1}' "$OUTFILE" | \
+  sort | \
+  awk '
+  {
+    split($1, a, "/")
+    day = a[1]+0; mon = a[2]; yr = a[3]
+    key = mon yr
+    if (prev_key == key) {
+      for (d = prev_day+1; d < day; d++) {
+        printf "%02d/%s/%s MISSING\n", d, mon, yr
+      }
+    }
+    prev_day = day; prev_key = key; prev_mon = mon; prev_yr = yr
+  }' >> "$OUTFILE"
 
   echo "Created: $OUTFILE"
 done
