@@ -104,6 +104,7 @@ for LOGFILE in "$@"; do
     max_hour = -1
     min_hour = -1
     for (h in hour_count) {
+      if (h == "NA" || h == "") continue
       if (hour_count[h] > max_hour) {
         max_hour = hour_count[h]
         busiest_hour = h
@@ -123,6 +124,7 @@ for LOGFILE in "$@"; do
     max_day = -1
     min_day = -1
     for (d in day_count) {
+      if (d == "") continue
       if (day_count[d] > max_day) {
         max_day = day_count[d]
         busiest_day = d
@@ -154,11 +156,11 @@ for LOGFILE in "$@"; do
     close("sort -nr")
 
     print "===REQUESTS_BY_HOUR==="
-    for (h in hour_count) print h, hour_count[h] | "sort"
+    for (h in hour_count) if (h != "NA" && h != "") print h, hour_count[h] | "sort"
     close("sort")
 
     print "===REQUESTS_BY_DAY==="
-    for (d in day_count) print d, day_count[d] | "sort"
+    for (d in day_count) if (d != "") print d, day_count[d] | "sort"
     close("sort")
 
     print "===404_ERRORS_BY_HOUR==="

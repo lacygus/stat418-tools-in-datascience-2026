@@ -1,7 +1,7 @@
 # NASA Web Server Log Analysis Report
 
 **Data:** NASA access logs — July 1995 and August 1995
-**Generated:** 2026-04-20 22:47:23
+**Generated:** 2026-04-20 22:51:34
 
 ---
 
@@ -27,7 +27,7 @@ IP access went up by 6.28pp. More direct access in August.
 | Metric | July 1995 | August 1995 |
 |--------|-----------|-------------|
 | Busiest hour | 14:00 (122479 reqs) | 15:00 (109465 reqs) |
-| Quietest hour | NA:00 (1 reqs) | 04:00 (26756 reqs) |
+| Quietest hour | 05:00 (31919 reqs) | 04:00 (26756 reqs) |
 
 ### Hourly traffic — July 1995
 
@@ -90,7 +90,7 @@ IP access went up by 6.28pp. More direct access in August.
 | Metric | July 1995 | August 1995 |
 |--------|-----------|-------------|
 | Busiest day | 13/Jul/1995 (134203 reqs) | 31/Aug/1995 (90125 reqs) |
-| Quietest day |  (1 reqs) | 26/Aug/1995 (31608 reqs) |
+| Quietest day | 28/Jul/1995 (27121 reqs) | 26/Aug/1995 (31608 reqs) |
 
 ---
 
