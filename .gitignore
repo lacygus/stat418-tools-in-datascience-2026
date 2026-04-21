@@ -107,4 +107,7 @@ temp/
 # Slide source files (keep only PDFs in repo)
 slides-*.pptx
 slides-*.md
-~$*.pptx
+~$*.pptxweek-2/assignment-1/submissions/sungjinchoi/data/
+week-2/assignment-1/submissions/sungjinchoi/backup/
+week-2/assignment-1/submissions/sungjinchoi/analysis/
+week-2/assignment-1/submissions/sungjinchoi/logs/
