@@ -1,7 +1,7 @@
 # NASA Web Server Log Analysis Report
 
 **Data:** NASA access logs — July 1995 and August 1995
-**Generated:** 2026-04-20 22:51:34
+**Generated:** 2026-04-20 22:54:53
 
 ---
 
@@ -19,6 +19,8 @@
 
 Traffic dropped in August.
 IP access went up by 6.28pp. More direct access in August.
+
+Note on 404 count: includes malformed log lines (missing HTTP version, special chars in URL). Standard-format only gives July 10,714 / August 9,978. Both are real 404 responses.
 
 ---
 

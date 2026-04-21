@@ -73,6 +73,8 @@ cat > "$REPORT_OUT" << HEADER
 Traffic dropped in August.
 IP access went up by $(awk "BEGIN{printf \"%.2f\", $AUG_IP_PERCENT - $JUL_IP_PERCENT}")pp. More direct access in August.
 
+Note on 404 count: includes malformed log lines (missing HTTP version, special chars in URL). Standard-format only gives July 10,714 / August 9,978. Both are real 404 responses.
+
 ---
 
 ## 2. Peak Hours
