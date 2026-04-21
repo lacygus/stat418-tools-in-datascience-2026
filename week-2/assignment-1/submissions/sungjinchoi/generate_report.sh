@@ -18,6 +18,7 @@ parse_kv() {
   while IFS='=' read -r key val; do
     [[ "$key" =~ ^=== ]] && break
     [[ -z "$key" ]] && continue
+    [[ "$key" == "FILE" ]] && continue
     eval "${prefix}_${key}=\"\${val}\""
   done < <(grep -v '^===' "$file" | grep '=')
 }
@@ -32,8 +33,10 @@ bar_chart() {
   local max_width=40
   local lines
   lines=$(cat)
+  [[ -z "$lines" ]] && return
   local max_val
-  max_val=$(echo "$lines" | awk '{print $1}' | sort -n | tail -1)
+  max_val=$(echo "$lines" | awk '{print $1+0}' | sort -n | tail -1)
+  [[ -z "$max_val" || "$max_val" -eq 0 ]] && return
   echo "$lines" | awk -v mw="$max_width" -v mv="$max_val" '
   {
     count=$1; label=$2
