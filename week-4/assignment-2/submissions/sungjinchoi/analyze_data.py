@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import logging
 import os
 from typing import Dict
@@ -25,17 +24,16 @@ def load_data() -> pd.DataFrame:
 
 
 def rating_analysis(df: pd.DataFrame) -> Dict:
-    d = df[["tmdb_rating", "letterboxd_rating"]].dropna()
-    d = d.copy()
-    d["lb_scaled"] = d["letterboxd_rating"] * 2  # scale 0-5 → 0-10
+    d = df[["tmdb_rating", "letterboxd_rating"]].dropna().copy()
+    d["lb_scaled"] = d["letterboxd_rating"] * 2  # scale to 0-10 for comparison
     corr = d["tmdb_rating"].corr(d["lb_scaled"])
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
     axes[0].scatter(d["tmdb_rating"], d["lb_scaled"], alpha=0.6, color="steelblue")
-    axes[0].set_xlabel("TMDB Rating (0–10)")
-    axes[0].set_ylabel("Letterboxd Rating (scaled 0–10)")
-    axes[0].set_title(f"TMDB vs Letterboxd Ratings  (r={corr:.2f})")
+    axes[0].set_xlabel("TMDB Rating (0-10)")
+    axes[0].set_ylabel("Letterboxd Rating (scaled 0-10)")
+    axes[0].set_title(f"TMDB vs Letterboxd Ratings (r={corr:.2f})")
 
     axes[1].hist(d["tmdb_rating"], bins=20, alpha=0.6, label="TMDB", color="steelblue")
     axes[1].hist(d["lb_scaled"], bins=20, alpha=0.6, label="Letterboxd (scaled)", color="coral")
@@ -46,7 +44,7 @@ def rating_analysis(df: pd.DataFrame) -> Dict:
     path = f"{ANALYSIS_DIR}/rating_analysis.png"
     plt.savefig(path, dpi=150)
     plt.close()
-    logging.info("Saved %s  corr=%.3f", path, corr)
+    logging.info("saved %s corr=%.3f", path, corr)
 
     return {
         "corr": round(corr, 3),
@@ -91,7 +89,7 @@ def genre_analysis(df: pd.DataFrame) -> Dict:
     path = f"{ANALYSIS_DIR}/genre_analysis.png"
     plt.savefig(path, dpi=150)
     plt.close()
-    logging.info("Saved %s", path)
+    logging.info("saved %s", path)
 
     return {
         "top_genre": top_genres.index[0],
@@ -112,7 +110,7 @@ def financial_analysis(df: pd.DataFrame) -> Dict:
     axes[0].scatter(d["budget"] / 1e6, d["revenue"] / 1e6, alpha=0.6, color="steelblue")
     axes[0].set_xlabel("Budget ($M)")
     axes[0].set_ylabel("Revenue ($M)")
-    axes[0].set_title(f"Budget vs Revenue  (r={corr:.2f})")
+    axes[0].set_title(f"Budget vs Revenue (r={corr:.2f})")
 
     top10 = d.nlargest(10, "profit")
     axes[1].barh(top10["title"], top10["profit"] / 1e6, color="coral")
@@ -124,7 +122,7 @@ def financial_analysis(df: pd.DataFrame) -> Dict:
     path = f"{ANALYSIS_DIR}/financial_analysis.png"
     plt.savefig(path, dpi=150)
     plt.close()
-    logging.info("Saved %s  corr=%.3f", path, corr)
+    logging.info("saved %s corr=%.3f", path, corr)
 
     most_profitable = d.loc[d["profit"].idxmax(), "title"]
     top5 = d.nlargest(5, "profit")[["title", "budget", "revenue", "profit"]]
@@ -160,7 +158,7 @@ def temporal_analysis(df: pd.DataFrame) -> Dict:
     path = f"{ANALYSIS_DIR}/temporal_analysis.png"
     plt.savefig(path, dpi=150)
     plt.close()
-    logging.info("Saved %s", path)
+    logging.info("saved %s", path)
 
     peak_year = int(yearly["count"].idxmax())
     return {
@@ -199,7 +197,7 @@ def write_report(df: pd.DataFrame, stats: Dict) -> None:
 
 | Source | Records | Method |
 |--------|---------|--------|
-| TMDB API | {len(df)} | REST API — popular endpoint |
+| TMDB API | {len(df)} | REST API -- popular endpoint |
 | Letterboxd | {lb_matched} | Web scraping (title slug) |
 | Merged | {lb_matched} | Joined on title slug |
 
@@ -209,17 +207,17 @@ Collected top-50 popular movies from TMDB. Constructed Letterboxd URLs from movi
 
 ## 2. Rating Analysis
 
-TMDB vs Letterboxd correlation: **r = {r['corr']}** (Letterboxd scaled 0–5 → 0–10)
+TMDB vs Letterboxd correlation: **r = {r['corr']}** (Letterboxd scaled 0-5 to 0-10)
 
 | Platform | Mean | Scale |
 |----------|------|-------|
-| TMDB | {r['tmdb_mean']} | 0–10 |
-| Letterboxd | {r['lb_mean_raw']} | 0–5 |
-| Letterboxd (scaled) | {r['lb_mean_scaled']} | 0–10 |
+| TMDB | {r['tmdb_mean']} | 0-10 |
+| Letterboxd | {r['lb_mean_raw']} | 0-5 |
+| Letterboxd (scaled) | {r['lb_mean_scaled']} | 0-10 |
 
 ![Rating Analysis](data/analysis/rating_analysis.png)
 
-Letterboxd users rate more strictly than TMDB. Correlation is moderate — both platforms track popularity but Letterboxd skews toward cinephile audiences.
+Letterboxd users rate more strictly than TMDB. Correlation is moderate -- both platforms track popularity but Letterboxd skews toward cinephile audiences.
 
 ---
 
@@ -227,7 +225,7 @@ Letterboxd users rate more strictly than TMDB. Correlation is moderate — both 
 
 | Genre | Count | Avg TMDB Rating |
 |-------|-------|-----------------|
-| {g['top_genre']} | {g['top_genre_count']} | — |
+| {g['top_genre']} | {g['top_genre_count']} | -- |
 
 Highest rated genre: **{g['best_rated_genre']}** (avg {g['best_rated_avg']})
 
@@ -259,7 +257,7 @@ Most of the popular list is recent. Top years by count:
 {year_rows}
 ![Temporal Analysis](data/analysis/temporal_analysis.png)
 
-Older films in the popular list score higher — only well-regarded classics stay popular long-term. Recent releases have lower ratings because vote counts are still building.
+Older films in the popular list score higher -- only well-regarded classics stay popular long-term. Recent releases have lower ratings because vote counts are still building.
 
 ---
 
@@ -267,20 +265,20 @@ Older films in the popular list score higher — only well-regarded classics sta
 
 - Letterboxd URLs are constructed from title slugs. Special characters and disambiguation (same title, different years) can cause mismatches.
 - Letterboxd uses dynamic rendering. JSON-LD structured data was used first; meta tag fallback used when unavailable.
-- TMDB returns `0` for budget/revenue when unknown. Treated as missing.
+- TMDB returns 0 for budget/revenue when unknown. Treated as missing.
 
 ---
 
 ## 7. Limitations
 
-- Dataset is 50 movies from TMDB "popular" — skewed toward recent English-language releases.
+- Dataset is 50 movies from TMDB "popular" -- skewed toward recent English-language releases.
 - Title slug matching can fail for non-English titles or remakes.
 - Financial analysis limited to {f['n']} movies with complete budget/revenue data.
 """
 
     with open("REPORT.md", "w", encoding="utf-8") as out:
         out.write(report)
-    logging.info("Wrote REPORT.md")
+    logging.info("wrote REPORT.md")
     print("Wrote REPORT.md")
 
 
@@ -294,7 +292,6 @@ def main() -> None:
         "temporal": temporal_analysis(df),
     }
     write_report(df, stats)
-    logging.info("Done")
 
 
 if __name__ == "__main__":
