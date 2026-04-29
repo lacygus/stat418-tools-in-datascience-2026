@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import re
 from typing import Dict, List, Tuple
 
 import pandas as pd
@@ -14,18 +15,24 @@ logging.basicConfig(
 )
 
 
+def _slugify(title: str) -> str:
+    slug = title.lower()
+    slug = re.sub(r"[^\w\s-]", "", slug)
+    slug = re.sub(r"[\s_]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    return slug.strip("-")
+
+
 def load_raw_data() -> Tuple[List[Dict], List[Dict]]:
-    """Load raw TMDB and IMDb JSON records from disk."""
     with open("data/raw/tmdb/movies.json") as f:
         tmdb = json.load(f)
-    with open("data/raw/imdb/ratings.json") as f:
-        imdb = json.load(f)
-    logging.info("Loaded tmdb=%d imdb=%d", len(tmdb), len(imdb))
-    return tmdb, imdb
+    with open("data/raw/letterboxd/ratings.json") as f:
+        lb = json.load(f)
+    logging.info("Loaded tmdb=%d letterboxd=%d", len(tmdb), len(lb))
+    return tmdb, lb
 
 
-def merge_data(tmdb_data: List[Dict], imdb_data: List[Dict]) -> pd.DataFrame:
-    """Merge TMDB movie records with IMDb rating records on IMDb ID."""
+def merge_data(tmdb_data: List[Dict], lb_data: List[Dict]) -> pd.DataFrame:
     rows = []
     for m in tmdb_data:
         genres = [g["name"] for g in m.get("genres", [])]
@@ -33,7 +40,7 @@ def merge_data(tmdb_data: List[Dict], imdb_data: List[Dict]) -> pd.DataFrame:
         cast = [p["name"] for p in m.get("cast", [])]
         crew = [p["name"] for p in m.get("crew", [])]
         rows.append({
-            "imdb_id": m.get("imdb_id"),
+            "title_slug": _slugify(m.get("title", "")),
             "title": m.get("title"),
             "release_date": m.get("release_date"),
             "runtime": m.get("runtime"),
@@ -49,32 +56,30 @@ def merge_data(tmdb_data: List[Dict], imdb_data: List[Dict]) -> pd.DataFrame:
         })
 
     df_tmdb = pd.DataFrame(rows)
-    df_imdb = pd.DataFrame(imdb_data)
-    df = df_tmdb.merge(df_imdb, on="imdb_id", how="left")
+    df_lb = pd.DataFrame(lb_data)[["title_slug", "letterboxd_rating", "fan_count"]]
+    df = df_tmdb.merge(df_lb, on="title_slug", how="left")
     logging.info("Merged rows=%d", len(df))
     return df
 
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Clean merged movie data, standardize types, and remove duplicates."""
     df = df.copy()
     df["release_date"] = pd.to_datetime(df["release_date"], errors="coerce")
     df["release_year"] = df["release_date"].dt.year
 
-    for col in ["budget", "revenue", "runtime", "tmdb_rating", "tmdb_votes", "rating", "num_reviews"]:
+    for col in ["budget", "revenue", "runtime", "tmdb_rating", "tmdb_votes", "letterboxd_rating", "fan_count"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df["budget"] = df["budget"].replace(0, pd.NA)
     df["revenue"] = df["revenue"].replace(0, pd.NA)
     df["tmdb_rating"] = df["tmdb_rating"].replace(0, pd.NA)
 
-    df = df.drop_duplicates(subset="imdb_id")
+    df = df.drop_duplicates(subset="title_slug")
     logging.info("Cleaned rows=%d null_cells=%d", len(df), df.isnull().sum().sum())
     return df
 
 
 def save_processed_data(df: pd.DataFrame, output_dir: str) -> None:
-    """Save processed data as CSV for submission and JSON for local inspection."""
     os.makedirs(output_dir, exist_ok=True)
     csv_path = f"{output_dir}/movies.csv"
     json_path = f"{output_dir}/movies.json"
@@ -85,9 +90,8 @@ def save_processed_data(df: pd.DataFrame, output_dir: str) -> None:
 
 
 def main() -> None:
-    """Run the data processing step from raw JSON files to processed outputs."""
-    tmdb, imdb = load_raw_data()
-    df = merge_data(tmdb, imdb)
+    tmdb, lb = load_raw_data()
+    df = merge_data(tmdb, lb)
     df = clean_data(df)
     save_processed_data(df, "data/processed")
     logging.info("Done")

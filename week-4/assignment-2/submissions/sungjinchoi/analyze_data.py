@@ -19,26 +19,26 @@ ANALYSIS_DIR = "data/analysis"
 
 
 def load_data() -> pd.DataFrame:
-    """Load the processed movie dataset for analysis."""
     df = pd.read_csv("data/processed/movies.csv", parse_dates=["release_date"])
     logging.info("Loaded %d rows", len(df))
     return df
 
 
 def rating_analysis(df: pd.DataFrame) -> Dict:
-    """Analyze TMDB and IMDb rating distributions and correlation."""
-    d = df[["tmdb_rating", "rating"]].dropna()
-    corr = d["tmdb_rating"].corr(d["rating"])
+    d = df[["tmdb_rating", "letterboxd_rating"]].dropna()
+    d = d.copy()
+    d["lb_scaled"] = d["letterboxd_rating"] * 2  # scale 0-5 → 0-10
+    corr = d["tmdb_rating"].corr(d["lb_scaled"])
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-    axes[0].scatter(d["tmdb_rating"], d["rating"], alpha=0.6, color="steelblue")
-    axes[0].set_xlabel("TMDB Rating")
-    axes[0].set_ylabel("IMDb Rating")
-    axes[0].set_title(f"TMDB vs IMDb Ratings  (r={corr:.2f})")
+    axes[0].scatter(d["tmdb_rating"], d["lb_scaled"], alpha=0.6, color="steelblue")
+    axes[0].set_xlabel("TMDB Rating (0–10)")
+    axes[0].set_ylabel("Letterboxd Rating (scaled 0–10)")
+    axes[0].set_title(f"TMDB vs Letterboxd Ratings  (r={corr:.2f})")
 
     axes[1].hist(d["tmdb_rating"], bins=20, alpha=0.6, label="TMDB", color="steelblue")
-    axes[1].hist(d["rating"], bins=20, alpha=0.6, label="IMDb", color="coral")
+    axes[1].hist(d["lb_scaled"], bins=20, alpha=0.6, label="Letterboxd (scaled)", color="coral")
     axes[1].set_title("Rating Distributions")
     axes[1].legend()
 
@@ -51,13 +51,13 @@ def rating_analysis(df: pd.DataFrame) -> Dict:
     return {
         "corr": round(corr, 3),
         "tmdb_mean": round(d["tmdb_rating"].mean(), 2),
-        "imdb_mean": round(d["rating"].mean(), 2),
+        "lb_mean_raw": round(d["letterboxd_rating"].mean(), 2),
+        "lb_mean_scaled": round(d["lb_scaled"].mean(), 2),
         "n": len(d),
     }
 
 
 def genre_analysis(df: pd.DataFrame) -> Dict:
-    """Analyze genre frequency and average TMDB rating by genre."""
     rows = []
     for _, r in df.iterrows():
         for g in str(r["genres"]).split("|"):
@@ -102,7 +102,6 @@ def genre_analysis(df: pd.DataFrame) -> Dict:
 
 
 def financial_analysis(df: pd.DataFrame) -> Dict:
-    """Analyze budget, revenue, and profit relationships for movies with financial data."""
     d = df[["title", "budget", "revenue", "tmdb_rating"]].dropna(subset=["budget", "revenue"])
     d = d[d["budget"] > 0].copy()
     d["profit"] = d["revenue"] - d["budget"]
@@ -128,15 +127,16 @@ def financial_analysis(df: pd.DataFrame) -> Dict:
     logging.info("Saved %s  corr=%.3f", path, corr)
 
     most_profitable = d.loc[d["profit"].idxmax(), "title"]
+    top5 = d.nlargest(5, "profit")[["title", "budget", "revenue", "profit"]]
     return {
         "corr": round(corr, 3),
         "most_profitable": most_profitable,
         "n": len(d),
+        "top5": top5,
     }
 
 
 def temporal_analysis(df: pd.DataFrame) -> Dict:
-    """Analyze movie counts and average ratings by release year."""
     d = df.dropna(subset=["release_year", "tmdb_rating"])
     d = d[d["release_year"] >= 2000].copy()
     yearly = d.groupby("release_year").agg(
@@ -166,21 +166,30 @@ def temporal_analysis(df: pd.DataFrame) -> Dict:
     return {
         "peak_year": peak_year,
         "peak_count": int(yearly.loc[peak_year, "count"]),
+        "yearly": yearly,
     }
 
 
 def write_report(df: pd.DataFrame, stats: Dict) -> None:
-    """Write a Markdown report summarizing the analysis and generated figures."""
     r = stats["rating"]
     g = stats["genre"]
     f = stats["financial"]
     t = stats["temporal"]
 
-    imdb_matched = df["rating"].notna().sum()
+    lb_matched = df["letterboxd_rating"].notna().sum()
+
+    top5_rows = ""
+    for _, row in f["top5"].iterrows():
+        top5_rows += f"| {row['title']} | ${row['budget']/1e6:.0f}M | ${row['revenue']/1e6:.0f}M | **${row['profit']/1e6:.0f}M** |\n"
+
+    yr = t["yearly"]
+    year_rows = ""
+    for yr_idx, yr_row in yr.sort_values("count", ascending=False).head(5).iterrows():
+        year_rows += f"| {int(yr_idx)} | {int(yr_row['count'])} | {yr_row['avg_rating']:.2f} |\n"
 
     report = f"""# Movie Data Collection & Analysis Report
 
-**Data:** TMDB API + IMDb scraping
+**Data:** TMDB API + Letterboxd scraping
 **Generated:** {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")}
 **Total records:** {len(df)}
 
@@ -190,73 +199,83 @@ def write_report(df: pd.DataFrame, stats: Dict) -> None:
 
 | Source | Records | Method |
 |--------|---------|--------|
-| TMDB API | {len(df)} | REST API (popular endpoint) |
-| IMDb matched | {imdb_matched} | IMDb pages + public ratings fallback |
+| TMDB API | {len(df)} | REST API — popular endpoint |
+| Letterboxd | {lb_matched} | Web scraping (title slug) |
+| Merged | {lb_matched} | Joined on title slug |
 
-Collected top-50 popular movies from TMDB. IMDb ratings were merged on IMDb ID.
+Collected top-50 popular movies from TMDB. Constructed Letterboxd URLs from movie titles. {len(df) - lb_matched} titles had no match or no ratings on Letterboxd.
 
 ---
 
 ## 2. Rating Analysis
 
-Correlation between TMDB and IMDb ratings: **{r['corr']}**
+TMDB vs Letterboxd correlation: **r = {r['corr']}** (Letterboxd scaled 0–5 → 0–10)
 
-| Platform | Mean Rating | Matched pairs |
-|----------|-------------|---------------|
-| TMDB | {r['tmdb_mean']} | — |
-| IMDb | {r['imdb_mean']} | {r['n']} |
+| Platform | Mean | Scale |
+|----------|------|-------|
+| TMDB | {r['tmdb_mean']} | 0–10 |
+| Letterboxd | {r['lb_mean_raw']} | 0–5 |
+| Letterboxd (scaled) | {r['lb_mean_scaled']} | 0–10 |
 
 ![Rating Analysis](data/analysis/rating_analysis.png)
 
-TMDB and IMDb ratings are closely correlated. Both platforms score popular titles similarly.
+Letterboxd users rate more strictly than TMDB. Correlation is moderate — both platforms track popularity but Letterboxd skews toward cinephile audiences.
 
 ---
 
 ## 3. Genre Analysis
 
-Most common genre: **{g['top_genre']}** ({g['top_genre_count']} movies)
+| Genre | Count | Avg TMDB Rating |
+|-------|-------|-----------------|
+| {g['top_genre']} | {g['top_genre_count']} | — |
+
 Highest rated genre: **{g['best_rated_genre']}** (avg {g['best_rated_avg']})
 
 ![Genre Analysis](data/analysis/genre_analysis.png)
 
-Action and Drama dominate the popular list. Genre count doesn't predict rating — niche genres can outperform mainstream ones.
+{g['top_genre']} dominates the popular list. Niche genres like {g['best_rated_genre']} score higher despite fewer titles.
 
 ---
 
 ## 4. Financial Analysis
 
-Budget vs revenue correlation: **{f['corr']}** (n={f['n']})
-Most profitable movie: **{f['most_profitable']}**
+Budget vs revenue correlation: **r = {f['corr']}** ({f['n']} movies with complete data)
 
+| Movie | Budget | Revenue | Profit |
+|-------|--------|---------|--------|
+{top5_rows}
 ![Financial Analysis](data/analysis/financial_analysis.png)
 
-Higher budget generally predicts higher revenue. But many high-budget films still underperform.
+Higher budget predicts higher revenue but not profit. Smaller-budget films with franchise backing often outperform big-budget originals.
 
 ---
 
 ## 5. Temporal Analysis
 
-Most productive year in dataset: **{t['peak_year']}** ({t['peak_count']} movies)
+Most of the popular list is recent. Top years by count:
 
+| Year | Count | Avg Rating |
+|------|-------|------------|
+{year_rows}
 ![Temporal Analysis](data/analysis/temporal_analysis.png)
 
-Recent years dominate the popular list. Ratings trend slightly downward for very recent releases — likely fewer votes so far.
+Older films in the popular list score higher — only well-regarded classics stay popular long-term. Recent releases have lower ratings because vote counts are still building.
 
 ---
 
 ## 6. Challenges
 
-- IMDb pages can return limited HTML or hide rating data. The scraper first checks pages and then uses IMDb's public ratings dataset as a fallback for ratings and vote counts.
+- Letterboxd URLs are constructed from title slugs. Special characters and disambiguation (same title, different years) can cause mismatches.
+- Letterboxd uses dynamic rendering. JSON-LD structured data was used first; meta tag fallback used when unavailable.
 - TMDB returns `0` for budget/revenue when unknown. Treated as missing.
-- Some TMDB movies lack an IMDb ID — those rows have null IMDb columns.
 
 ---
 
 ## 7. Limitations
 
-- 50 movies from TMDB "popular" list only — skewed toward recent blockbusters.
-- Metascore extraction is unreliable due to IMDb's dynamic content.
-- Budget/revenue available for only {f['n']} movies.
+- Dataset is 50 movies from TMDB "popular" — skewed toward recent English-language releases.
+- Title slug matching can fail for non-English titles or remakes.
+- Financial analysis limited to {f['n']} movies with complete budget/revenue data.
 """
 
     with open("REPORT.md", "w", encoding="utf-8") as out:
@@ -266,7 +285,6 @@ Recent years dominate the popular list. Ratings trend slightly downward for very
 
 
 def main() -> None:
-    """Run all analysis steps and regenerate the Markdown report."""
     os.makedirs(ANALYSIS_DIR, exist_ok=True)
     df = load_data()
     stats = {

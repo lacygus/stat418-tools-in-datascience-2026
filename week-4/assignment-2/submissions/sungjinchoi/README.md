@@ -2,9 +2,9 @@
 
 ## Overview
 
-Collects movie data from the TMDB API and IMDb rating sources, then analyzes trends.
+Collects movie data from the TMDB API and Letterboxd, then analyzes trends.
 
-50 movies. TMDB provides metadata, and IMDb provides ratings and vote counts.
+50 movies. TMDB provides metadata. Letterboxd provides ratings and fan counts.
 
 ---
 
@@ -41,7 +41,7 @@ Or run steps individually:
 
 ```bash
 python api_collector.py    # collect TMDB data
-python web_scraper.py      # scrape IMDb ratings
+python web_scraper.py      # scrape Letterboxd ratings
 python data_processor.py   # merge and clean
 python analyze_data.py     # analyze and generate REPORT.md
 ```
@@ -51,14 +51,14 @@ python analyze_data.py     # analyze and generate REPORT.md
 ## Output
 
 ```
-data/raw/tmdb/movies.json         raw TMDB responses
-data/raw/imdb/ratings.json        IMDb ratings
-data/processed/movies.csv         merged, cleaned dataset
+data/raw/tmdb/movies.json              raw TMDB responses
+data/raw/letterboxd/ratings.json       scraped Letterboxd ratings
+data/processed/movies.csv              merged, cleaned dataset
 data/analysis/rating_analysis.png
 data/analysis/genre_analysis.png
 data/analysis/financial_analysis.png
 data/analysis/temporal_analysis.png
-REPORT.md                         generated analysis report
+REPORT.md                              generated analysis report
 logs/pipeline.log
 ```
 
@@ -67,14 +67,14 @@ logs/pipeline.log
 ## Data Sources
 
 - TMDB API: title, genres, budget, revenue, runtime, cast, ratings
-- IMDb: rating, vote count, and metascore when available. The scraper checks IMDb pages first and uses IMDb's public ratings dataset as a fallback when page HTML does not expose ratings.
+- Letterboxd: rating (0–5 stars), fan count. Scraped via title slug URLs.
 
 ---
 
 ## Ethical Considerations
 
-- IMDb robots.txt checked before page scraping
-- Rate limiting: 2s between IMDb requests, 0.25s between TMDB requests
+- Letterboxd robots.txt checked before scraping
+- Rate limiting: 2s between requests
 - User-Agent identifies as student project
 - Data used for educational purposes only
 
@@ -83,6 +83,5 @@ logs/pipeline.log
 ## Known Limitations
 
 - Budget/revenue missing for many titles (TMDB returns 0 when unknown)
-- IMDb metascore may be missing for some entries due to dynamic rendering
-- IMDb page HTML may not expose ratings consistently, so the pipeline falls back to IMDb's public ratings dataset for rating and vote count fields
+- Letterboxd URL matching uses title slugs — can fail for non-English titles or remakes
 - Dataset limited to 50 movies from TMDB "popular" list
