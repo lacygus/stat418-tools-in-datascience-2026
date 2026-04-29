@@ -20,12 +20,16 @@ HEADERS = {"User-Agent": "UCLA STAT418 Student - sungjinchoi5790@gmail.com"}
 
 
 class LetterboxdScraper:
+    """Scrapes movie ratings and fan counts from Letterboxd."""
+
     def __init__(self, delay: float = 2.0) -> None:
+        """Set up session with rate limit delay."""
         self.delay = delay
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
 
     def check_robots_txt(self) -> bool:
+        """Check if Letterboxd allows scraping."""
         try:
             r = self.session.get("https://letterboxd.com/robots.txt", timeout=10)
             disallowed = "Disallow: /" in r.text
@@ -36,6 +40,7 @@ class LetterboxdScraper:
             return False
 
     def _slugify_title(self, title: str) -> str:
+        """Convert a movie title to a Letterboxd URL slug."""
         slug = title.lower()
         slug = re.sub(r"[^\w\s-]", "", slug)
         slug = re.sub(r"[\s_]+", "-", slug)
@@ -43,6 +48,7 @@ class LetterboxdScraper:
         return slug.strip("-")
 
     def scrape_movie_page(self, title: str, year: int | None = None) -> Dict:
+        """Scrape rating and fan count for one movie."""
         time.sleep(self.delay)
         slug = self._slugify_title(title)
         url = f"https://letterboxd.com/film/{slug}/"
@@ -61,6 +67,7 @@ class LetterboxdScraper:
         return result
 
     def _extract_rating(self, soup: BeautifulSoup) -> float | None:
+        """Pull rating from JSON-LD or meta tag fallback."""
         tag = soup.find("script", type="application/ld+json")
         if tag:
             try:
@@ -81,6 +88,7 @@ class LetterboxdScraper:
         return None
 
     def _extract_fan_count(self, soup: BeautifulSoup) -> int | None:
+        """Extract fan count from the stats section."""
         for a in soup.find_all("a", href=re.compile(r"/film/.+/fans/")):
             text = a.get_text(strip=True).upper()
             try:
@@ -94,6 +102,7 @@ class LetterboxdScraper:
         return None
 
     def scrape_multiple_movies(self, movies: List[Dict]) -> List[Dict]:
+        """Scrape a list of movies and return results."""
         results = []
         for i, m in enumerate(movies, 1):
             title = m.get("title", "")

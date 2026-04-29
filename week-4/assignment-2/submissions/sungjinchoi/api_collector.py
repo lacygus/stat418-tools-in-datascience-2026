@@ -18,10 +18,13 @@ logging.basicConfig(
 
 
 class TMDBCollector:
+    """Collects movie data from the TMDB API."""
+
     BASE = "https://api.themoviedb.org/3"
     INTERVAL = 0.25  # 40 req per 10 seconds
 
     def __init__(self) -> None:
+        """Load API key and set up session."""
         key = os.environ.get("TMDB_API_KEY", "")
         if not key:
             raise SystemExit("ERROR: TMDB_API_KEY not set in .env")
@@ -30,6 +33,7 @@ class TMDBCollector:
         self._last = 0.0
 
     def _get(self, path: str, params: Dict | None = None) -> Dict:
+        """Make a rate-limited GET request with retry logic."""
         elapsed = time.time() - self._last
         if elapsed < self.INTERVAL:
             time.sleep(self.INTERVAL - elapsed)
@@ -50,15 +54,19 @@ class TMDBCollector:
         return {}
 
     def get_popular_movies(self, page: int = 1) -> List[Dict]:
+        """Return one page of popular movies."""
         return self._get("movie/popular", {"page": page}).get("results", [])
 
     def get_movie_details(self, movie_id: int) -> Dict:
+        """Return detailed metadata for a movie."""
         return self._get(f"movie/{movie_id}")
 
     def get_movie_credits(self, movie_id: int) -> Dict:
+        """Return cast and crew for a movie."""
         return self._get(f"movie/{movie_id}/credits")
 
     def collect_all_data(self, num_items: int = 50) -> List[Dict]:
+        """Collect details and credits for num_items popular movies."""
         movies: List[Dict] = []
         page = 1
         while len(movies) < num_items:

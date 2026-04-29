@@ -18,12 +18,14 @@ ANALYSIS_DIR = "data/analysis"
 
 
 def load_data() -> pd.DataFrame:
+    """Load processed movie CSV."""
     df = pd.read_csv("data/processed/movies.csv", parse_dates=["release_date"])
     logging.info("Loaded %d rows", len(df))
     return df
 
 
 def rating_analysis(df: pd.DataFrame) -> Dict:
+    """Analyze TMDB vs Letterboxd rating correlation and distributions."""
     d = df[["tmdb_rating", "letterboxd_rating"]].dropna().copy()
     d["lb_scaled"] = d["letterboxd_rating"] * 2  # scale to 0-10 for comparison
     corr = d["tmdb_rating"].corr(d["lb_scaled"])
@@ -56,6 +58,7 @@ def rating_analysis(df: pd.DataFrame) -> Dict:
 
 
 def genre_analysis(df: pd.DataFrame) -> Dict:
+    """Analyze genre frequency and average ratings."""
     rows = []
     for _, r in df.iterrows():
         for g in str(r["genres"]).split("|"):
@@ -100,6 +103,7 @@ def genre_analysis(df: pd.DataFrame) -> Dict:
 
 
 def financial_analysis(df: pd.DataFrame) -> Dict:
+    """Analyze budget vs revenue and find most profitable movies."""
     d = df[["title", "budget", "revenue", "tmdb_rating"]].dropna(subset=["budget", "revenue"])
     d = d[d["budget"] > 0].copy()
     d["profit"] = d["revenue"] - d["budget"]
@@ -135,6 +139,7 @@ def financial_analysis(df: pd.DataFrame) -> Dict:
 
 
 def temporal_analysis(df: pd.DataFrame) -> Dict:
+    """Analyze rating trends and movie counts by release year."""
     d = df.dropna(subset=["release_year", "tmdb_rating"])
     d = d[d["release_year"] >= 2000].copy()
     yearly = d.groupby("release_year").agg(
@@ -169,6 +174,7 @@ def temporal_analysis(df: pd.DataFrame) -> Dict:
 
 
 def write_report(df: pd.DataFrame, stats: Dict) -> None:
+    """Write analysis results to REPORT.md."""
     r = stats["rating"]
     g = stats["genre"]
     f = stats["financial"]

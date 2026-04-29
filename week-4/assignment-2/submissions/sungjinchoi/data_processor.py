@@ -16,6 +16,7 @@ logging.basicConfig(
 
 
 def _slugify(title: str) -> str:
+    """Convert a movie title to a URL-friendly slug."""
     slug = title.lower()
     slug = re.sub(r"[^\w\s-]", "", slug)
     slug = re.sub(r"[\s_]+", "-", slug)
@@ -24,6 +25,7 @@ def _slugify(title: str) -> str:
 
 
 def load_raw_data() -> Tuple[List[Dict], List[Dict]]:
+    """Load raw TMDB and Letterboxd JSON files."""
     with open("data/raw/tmdb/movies.json") as f:
         tmdb = json.load(f)
     with open("data/raw/letterboxd/ratings.json") as f:
@@ -33,6 +35,7 @@ def load_raw_data() -> Tuple[List[Dict], List[Dict]]:
 
 
 def merge_data(tmdb_data: List[Dict], lb_data: List[Dict]) -> pd.DataFrame:
+    """Merge TMDB and Letterboxd data on title slug."""
     rows = []
     for m in tmdb_data:
         genres = [g["name"] for g in m.get("genres", [])]
@@ -63,6 +66,7 @@ def merge_data(tmdb_data: List[Dict], lb_data: List[Dict]) -> pd.DataFrame:
 
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Clean types, handle missing values, and remove duplicates."""
     df = df.copy()
     df["release_date"] = pd.to_datetime(df["release_date"], errors="coerce")
     df["release_year"] = df["release_date"].dt.year
@@ -80,6 +84,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save_processed_data(df: pd.DataFrame, output_dir: str) -> None:
+    """Save processed data as CSV and JSON."""
     os.makedirs(output_dir, exist_ok=True)
     csv_path = f"{output_dir}/movies.csv"
     json_path = f"{output_dir}/movies.json"
